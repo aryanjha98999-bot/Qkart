@@ -15,11 +15,15 @@ import com.example.qkart2.DataCLass
 import com.example.qkart2.R
 import com.example.qkart2.databinding.FragmentHomeBinding
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
 class HomeFragment : Fragment() {
 
     private lateinit var binding: FragmentHomeBinding
     private val dataList = ArrayList<DataCLass>()
+    private lateinit var adapter: AdapterClass
+    private val firestore = FirebaseFirestore.getInstance()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,12 +33,16 @@ class HomeFragment : Fragment() {
 
         binding = FragmentHomeBinding.inflate(inflater, container, false)
 
-        setupImageSlider()
+        setupImageSlider()     // ✅ unchanged
         setupRecyclerView()
         setupMenuClick()
 
+        loadNewestItemsFromEachCanteen() // 🔥 real data
+
         return binding.root
     }
+
+    // ================= SLIDER (UNCHANGED) =================
 
     private fun setupImageSlider() {
 
@@ -47,20 +55,17 @@ class HomeFragment : Fragment() {
         binding.imageSlider.setImageList(slides, ScaleTypes.FIT)
 
         binding.imageSlider.setItemClickListener(object : ItemClickListener {
-
             override fun onItemSelected(position: Int) {
                 when (position) {
                     0 -> {
                         MenubottomsheetFragment()
                             .show(parentFragmentManager, "Menu")
                     }
-
                     1 -> {
                         requireActivity()
                             .findViewById<BottomNavigationView>(R.id.botton_navigation)
                             .selectedItemId = R.id.search
                     }
-
                     2 -> {
                         requireActivity()
                             .findViewById<BottomNavigationView>(R.id.botton_navigation)
@@ -69,26 +74,24 @@ class HomeFragment : Fragment() {
                 }
             }
 
-            override fun doubleClick(position: Int) {
-
-            }
+            override fun doubleClick(position: Int) {}
         })
     }
 
-
+    // ================= RECYCLER VIEW =================
 
     private fun setupRecyclerView() {
 
-        loadData()
+        adapter = AdapterClass(
+            dataList = dataList,
+            context = requireContext(),
+            scope = viewLifecycleOwner.lifecycleScope
+        )
 
         binding.Recyclerview.apply {
             setHasFixedSize(true)
             layoutManager = LinearLayoutManager(requireContext())
-            adapter = AdapterClass(
-                dataList = dataList,
-                context = requireContext(),
-                scope = viewLifecycleOwner.lifecycleScope
-            )
+            adapter = this@HomeFragment.adapter
         }
     }
 
@@ -99,45 +102,50 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun loadData() {
+    // ================= FIRESTORE LOGIC =================
 
-        val imageList = arrayOf(
-            "https://res.cloudinary.com/dgfxkudik/image/upload/v1766656119/xvm2t0wdaxq9ojubps3f.jpg",
-            "https://res.cloudinary.com/dgfxkudik/image/upload/v1766661542/aj04fzmsvvfkg8iy1can.jpg",
-            "https://res.cloudinary.com/dgfxkudik/image/upload/v1766661506/rxd9luu4jhejqfi0awxk.jpg",
-            "https://res.cloudinary.com/dgfxkudik/image/upload/v1766661587/xwt8kdxi72ujats7etzj.jpg",
-            "https://res.cloudinary.com/dgfxkudik/image/upload/v1766661648/q4rhsdzw23ih7t00pkdw.jpg"
-        )
+    private fun loadNewestItemsFromEachCanteen() {
 
-        val titleList = arrayOf("Burger", "Pasta", "Pizza", "Burrito", "Momos")
-        val priceList = arrayOf("₹80", "₹100", "₹120", "₹40", "₹50")
+        dataList.clear()
+        adapter.notifyDataSetChanged()
 
-        val descList = arrayOf(
-            "A juicy sandwich made with a grilled patty placed inside a soft bun.",
-            "An Italian dish made from boiled pasta tossed in a rich sauce.",
-            "A baked flatbread topped with sauce and cheese.",
-            "A Mexican wrap filled with rice, beans, and veggies.",
-            "Steamed dumplings filled with spiced vegetables or meat."
-        )
+        firestore.collection("canteens")
+            .get()
+            .addOnSuccessListener { canteensSnapshot ->
 
-        val ingList = arrayOf(
-            "Veg / Chicken Patty\nLettuce\nTomato\nOnion\nCheese",
-            "Pasta\nOlive oil\nGarlic\nOnion\nSauce",
-            "Pizza base\nMozzarella\nCapsicum\nOnion",
-            "Tortilla\nRice\nBeans\nVeggies",
-            "Maida\nCabbage\nCarrot\nOnion"
-        )
+                for (canteenDoc in canteensSnapshot.documents) {
 
-        for (i in imageList.indices) {
-            dataList.add(
-                DataCLass(
-                    imageList[i],
-                    titleList[i],
-                    priceList[i],
-                    descList[i],
-                    ingList[i]
-                )
-            )
-        }
+                    val canteenId = canteenDoc.id
+                    val canteenName =
+                        canteenDoc.getString("restaurantName") ?: "Unknown Canteen"
+
+                    firestore.collection("canteens")
+                        .document(canteenId)
+                        .collection("menuItems")
+                        .orderBy("createdAt", Query.Direction.DESCENDING)
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener { menuSnapshot ->
+
+                            if (!menuSnapshot.isEmpty) {
+
+                                val itemDoc = menuSnapshot.documents[0]
+
+                                val item = DataCLass(
+                                    dataimaage = itemDoc.getString("url") ?: "",
+                                    dataTitle = itemDoc.getString("itemname") ?: "",
+                                    dataprice = itemDoc.getString("itemprice") ?:"",
+                                    description = itemDoc.getString("description") ?: "",
+                                    ingredients = itemDoc.getString("ingredients") ?: "",
+                                    Restaurant_name = canteenName,
+                                    canteenid = canteenId
+                                )
+
+                                dataList.add(item)
+                                adapter.notifyItemInserted(dataList.size - 1)
+                            }
+                        }
+                }
+            }
     }
 }

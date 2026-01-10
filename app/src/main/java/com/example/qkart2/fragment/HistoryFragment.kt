@@ -58,7 +58,9 @@ class HistoryFragment : Fragment() {
                     it.itemprice.toString(),
                     it.datacount,
                     it.description,
-                    it.ingredients
+                    it.ingredients,
+                    it.Restaurant_name,
+                    it.canteenid
                 )
             }
 

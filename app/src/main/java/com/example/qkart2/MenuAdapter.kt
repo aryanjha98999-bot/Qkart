@@ -13,10 +13,12 @@ import com.bumptech.glide.Glide
 import com.example.qkart2.fragment.DataCLassMenu
 import com.example.qkart2.roomdb.foodData
 import com.example.qkart2.roomdb.foodDatabase
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.random.Random
 
 class MenuAdapter(
     private val dataList: ArrayList<DataCLassMenu>,
@@ -38,7 +40,7 @@ class MenuAdapter(
 
         holder.rvTitle.text = item.name
         holder.rvprice.text = item.price
-
+        holder.rvrestaurant.text=item.restaurant_name
         Glide.with(holder.itemView.context)
             .load(item.imageUrl)
             .placeholder(R.drawable.m)
@@ -58,6 +60,65 @@ class MenuAdapter(
 
             scope.launch(Dispatchers.IO) {
 
+                val existingRestaurant = dao.getCartRestaurant()
+
+                withContext(Dispatchers.Main) {
+                    if (existingRestaurant == null) {
+                        insertItem(item, holder)
+                        return@withContext
+                    }
+
+                    if (existingRestaurant == item.restaurant_name) {
+                        insertItem(item, holder)
+                    }
+                    else {
+                        MaterialAlertDialogBuilder(context)
+                            .setTitle("Replace Cart?")
+                            .setMessage(
+                                "Your cart contains items from $existingRestaurant.\n\n" +
+                                        "Do you want to remove them and add items from ${item.restaurant_name}?"
+                            )
+                            .setPositiveButton("Yes") { _, _ ->
+                                scope.launch(Dispatchers.IO) {
+                                    dao.deleteAll()
+                                    withContext(Dispatchers.Main) {
+                                        insertItem(item, holder)
+                                    }
+                                }
+                            }
+                            .setNegativeButton("No", null)
+                            .show()
+                    }
+                }
+            }
+        }
+
+        holder.itemView.setOnClickListener {
+            val intent = Intent(context, DetailsActivity::class.java)
+            intent.putExtra("itemid", item.itemId)
+            intent.putExtra("menuname", item.name)
+            intent.putExtra("menuprice", item.price)
+            intent.putExtra("menuimage", item.imageUrl)
+            intent.putExtra("menudescription", item.description)
+            intent.putExtra("menuingredients", item.ingredients)
+            intent.putExtra("canteenId", item.canteenId)
+            intent.putExtra("restaurant_name", item.restaurant_name)
+            context.startActivity(intent)
+        }
+    }
+
+    override fun getItemCount(): Int = dataList.size
+
+    class ViewHolderClass(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val rvimage: ImageView = itemView.findViewById(R.id.imagefood)
+        val rvTitle: TextView = itemView.findViewById(R.id.foodname)
+        val rvrestaurant: TextView=itemView.findViewById(R.id.Restaurantname)
+        val rvprice: TextView = itemView.findViewById(R.id.price)
+        val button1: TextView = itemView.findViewById(R.id.addtocart)
+    }
+    private fun insertItem(item: DataCLassMenu, holder: ViewHolderClass) {
+            scope.launch(Dispatchers.IO) {
+
                 val exists = dao.countItemByName(item.name) > 0
 
                 if (!exists) {
@@ -67,7 +128,9 @@ class MenuAdapter(
                         itemprice = item.price,
                         datacount = 1,
                         description = item.description,
-                        ingredients = item.ingredients
+                        ingredients = item.ingredients,
+                        Restaurant_name = item.restaurant_name,
+                        canteenid = item.canteenId
                     )
 
                     dao.insert(cartItem)
@@ -81,29 +144,12 @@ class MenuAdapter(
                     dao.deleteItemByName(item.name)
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Removed from cart", Toast.LENGTH_SHORT).show()
                         holder.button1.text = "Add to cart"
+                        Toast.makeText(context, "Removed from cart", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
-        }
-        holder.itemView.setOnClickListener {
-            val intent = Intent(context, DetailsActivity::class.java)
-            intent.putExtra("menuname", item.name)
-            intent.putExtra("menuprice", item.price)
-            intent.putExtra("menuimage", item.imageUrl)
-            intent.putExtra("menudescription", item.description)
-            intent.putExtra("menuingredients", item.ingredients)
-            context.startActivity(intent)
-        }
+
     }
 
-    override fun getItemCount(): Int = dataList.size
-
-    class ViewHolderClass(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val rvimage: ImageView = itemView.findViewById(R.id.imagefood)
-        val rvTitle: TextView = itemView.findViewById(R.id.foodname)
-        val rvprice: TextView = itemView.findViewById(R.id.price)
-        val button1: TextView = itemView.findViewById(R.id.addtocart)
-    }
 }

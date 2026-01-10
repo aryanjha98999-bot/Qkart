@@ -17,10 +17,9 @@ import androidx.constraintlayout.widget.ConstraintLayout
 class splashscreen : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
-            AppCompatDelegate.setDefaultNightMode(
-                AppCompatDelegate.MODE_NIGHT_YES
-            )
+        AppCompatDelegate.setDefaultNightMode(
+            AppCompatDelegate.MODE_NIGHT_NO
+        )
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_splashscreen)

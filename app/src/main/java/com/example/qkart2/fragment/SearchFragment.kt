@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -18,7 +19,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 
 class SearchFragment : Fragment() {
 
-    private lateinit var binding: FragmentSearchBinding
+    private var _binding: FragmentSearchBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var adapter: SearchAdapter
     private val dataList = ArrayList<DataCLassMenu>()
     private val filteredList = ArrayList<DataCLassMenu>()
@@ -28,7 +31,7 @@ class SearchFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
 
-        binding = FragmentSearchBinding.inflate(inflater, container, false)
+        _binding = FragmentSearchBinding.inflate(inflater, container, false)
 
         adapter = SearchAdapter(
             filteredList,
@@ -37,58 +40,68 @@ class SearchFragment : Fragment() {
         )
 
         binding.recyclerview.apply {
-            layoutManager = LinearLayoutManager(requireContext())
+            layoutManager = LinearLayoutManager(context)
             setHasFixedSize(true)
             adapter = this@SearchFragment.adapter
         }
 
-        // 🔥 REPLACED
-        loadFoodFromFirestore()
         setupSearchView()
+        loadFoodFromFirestore()
 
         return binding.root
     }
 
-    /**
-     * 🔥 Firestore replaces ContentProvider
-     */
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    @SuppressLint("SuspiciousIndentation")
     private fun loadFoodFromFirestore() {
 
-        FirebaseFirestore.getInstance()
-            .collection("menu")
-            .addSnapshotListener { snapshot, error ->
+        val firestore = FirebaseFirestore.getInstance()
 
-                if (error != null) {
-                    Log.e("MENU_DEBUG", "Firestore error", error)
-                    return@addSnapshotListener
+        firestore.collection("canteens").get().addOnSuccessListener { canteenSnapshot ->
+
+            val canteenMap = mutableMapOf<String, String>()
+            for (canteen in canteenSnapshot.documents) {
+                canteenMap[canteen.id] = canteen.getString("restaurantName") ?: ""
+            }
+
+            firestore.collectionGroup("menuItems")
+                .get()
+                .addOnSuccessListener { result ->
+
+                    dataList.clear()
+
+                    for (doc in result.documents) {
+
+                        val canteenId = doc.reference.parent.parent?.id ?: ""
+
+                        val item = DataCLassMenu(
+                            itemId = doc.id,
+                            name = doc.getString("itemname") ?: "",
+                            price = doc.getString("itemprice") ?: "",
+                            imageUrl = doc.getString("url") ?: "",
+                            description = doc.getString("description") ?: "",
+                            ingredients = doc.getString("ingredients") ?: "",
+                            restaurant_name = canteenMap[canteenId] ?: "Unknown",
+                            canteenId = canteenId
+                        )
+
+                            dataList.add(item)
+                            filterList(binding.searchView.query?.toString())
+                        }
                 }
+            }
 
-                if (snapshot == null) return@addSnapshotListener
 
-                dataList.clear()
-
-                for (doc in snapshot.documents) {
-
-                    val item = DataCLassMenu(
-                        name = doc.getString("itemname") ?: "",
-                        price = doc.getString("itemprice") ?: "",
-                        imageUrl = doc.getString("url") ?: "",
-                        description = doc.getString("description") ?: "",
-                        ingredients = doc.getString("ingredients") ?: ""
-                    )
-
-                    dataList.add(item)
-                }
-
-                filteredList.clear()
-                filteredList.addAll(dataList)
-                adapter.notifyDataSetChanged()
-
-                Log.d("MENU_DEBUG", "Items Loaded = ${dataList.size}")
+    .addOnFailureListener {
+                if (!isAdded || _binding == null) return@addOnFailureListener
+                Toast.makeText(context, "Failed to load food", Toast.LENGTH_SHORT).show()
             }
     }
 
-    @SuppressLint("ResourceAsColor")
     private fun setupSearchView() {
 
         val searchText = binding.searchView.findViewById<EditText>(
@@ -100,7 +113,7 @@ class SearchFragment : Fragment() {
         binding.searchView.setOnQueryTextListener(object :
             SearchView.OnQueryTextListener {
 
-            override fun onQueryTextSubmit(query: String?): Boolean = false
+            override fun onQueryTextSubmit(query: String?) = false
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 filterList(newText)
@@ -124,6 +137,6 @@ class SearchFragment : Fragment() {
             }
         }
 
-        adapter.notifyDataSetChanged()
+        if (_binding != null) adapter.notifyDataSetChanged()
     }
 }

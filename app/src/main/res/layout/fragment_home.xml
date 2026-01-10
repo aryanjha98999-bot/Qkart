@@ -9,15 +9,14 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/sliderCard"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_margin="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
         app:cardCornerRadius="20dp"
         app:cardUseCompatPadding="true"
         app:layout_constraintDimensionRatio="16:9"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <com.denzcoskun.imageslider.ImageSlider
             android:id="@+id/image_slider"
@@ -34,32 +33,32 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="12dp"
-        android:text="Populars"
-        android:textColor="#6FAF24"
-        android:textSize="24sp"
-        android:textStyle="bold"
         android:fontFamily="@font/yeonsungregular"
-        app:layout_constraintTop_toBottomOf="@id/sliderCard"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:text="Restaurants delivering to you"
+        android:textColor="#6FAF24"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/sliderCard" />
 
     <TextView
         android:id="@+id/textViewMenu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="6dp"
-        android:minHeight="36dp"
         android:background="@drawable/textview_shape"
         android:clickable="true"
-        android:focusable="true"
         android:elevation="10dp"
-        android:text="View Menu"
+        android:focusable="true"
+        android:minHeight="36dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="6dp"
+        android:text="Menu"
         android:textColor="#67A81C"
         android:textSize="18sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="@id/tvPopular"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tvPopular" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -70,11 +69,14 @@
         android:clipToPadding="false"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:paddingBottom="24dp"
+        android:paddingBottom="90dp"
         app:layout_constraintTop_toBottomOf="@id/tvPopular"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="1"
+        app:layout_constraintHeight_default="spread"
         tools:listitem="@layout/item_layout" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

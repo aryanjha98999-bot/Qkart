@@ -14,6 +14,8 @@ import com.example.qkart2.LoginActivity
 import com.example.qkart2.databinding.FragmentProfileBinding
 import com.example.qkart2.model.Usermodel
 import com.example.qkart2.roomdb.foodDatabase
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import kotlinx.coroutines.Dispatchers
@@ -55,10 +57,10 @@ class ProfileFragment : Fragment() {
             .child(uid)
             .addListenerForSingleValueEvent(object : ValueEventListener {
 
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (!snapshot.exists()) return
+                override fun onDataChange(result: DataSnapshot) {
+                    if (!result.exists()) return
 
-                    val user = snapshot.getValue(Usermodel::class.java)
+                    val user = result.getValue(Usermodel::class.java)
 
                     if (!user?.name.isNullOrBlank()) {
                         binding.namem.setText(user?.name)
@@ -77,6 +79,7 @@ class ProfileFragment : Fragment() {
                 }
             })
     }
+
 
     private fun saveData() {
         sharedPreferences.edit().apply {
@@ -101,13 +104,19 @@ class ProfileFragment : Fragment() {
         binding.number.setText(sharedPreferences.getString("number", ""))
     }
     private fun logoutUser() {
+        FirebaseAuth.getInstance().signOut()
+        GoogleSignIn.getClient(
+            requireContext(),
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).build()
+        ).signOut()
 
         sharedPreferences.edit().clear().apply()
 
-        val intent = Intent(requireContext(), LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-
         Toast.makeText(requireContext(), "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+        val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
     }
 }

@@ -49,29 +49,44 @@ class MenubottomsheetFragment : BottomSheetDialogFragment() {
 
     private fun loadFoodFromFirestore() {
 
-        FirebaseFirestore.getInstance()
-            .collection("menu")
-            .get()
-            .addOnSuccessListener { result->
+        val firestore = FirebaseFirestore.getInstance()
 
-                dataList.clear()
+        firestore.collection("canteens").get().addOnSuccessListener { canteenSnapshot ->
 
-                for (doc in result.documents) {
-                    val item = DataCLassMenu(
-                        name = doc.getString("itemname") ?: "",
-                        price = doc.getString("itemprice") ?: "",
-                        imageUrl = doc.getString("url") ?: "",
-                        description = doc.getString("description") ?: "",
-                        ingredients = doc.getString("ingredients") ?: ""
-                    )
-                    dataList.add(item)
+            val canteenMap = mutableMapOf<String, String>()
+            for (canteen in canteenSnapshot.documents) {
+                canteenMap[canteen.id] = canteen.getString("restaurantName") ?: ""
+            }
+
+            firestore.collectionGroup("menuItems")
+                .get()
+                .addOnSuccessListener { result ->
+
+                    dataList.clear()
+
+                    for (doc in result.documents) {
+
+                        val canteenId = doc.reference.parent.parent?.id ?: ""
+
+                        val item = DataCLassMenu(
+                            itemId = doc.id,
+                            name = doc.getString("itemname") ?: "",
+                            price = doc.getString("itemprice") ?: "",
+                            imageUrl = doc.getString("url") ?: "",
+                            description = doc.getString("description") ?: "",
+                            ingredients = doc.getString("ingredients") ?: "",
+                            restaurant_name = canteenMap[canteenId] ?: "Unknown",
+                            canteenId = canteenId
+                        )
+
+                        dataList.add(item)
+                    }
+
+                    menuAdapter.notifyDataSetChanged()
                 }
-
-                Toast.makeText(requireContext(), "Menu Loaded", Toast.LENGTH_SHORT).show()
-                menuAdapter.notifyDataSetChanged()
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(requireContext(), "Failed to load menu", Toast.LENGTH_SHORT).show()
-            }
+        }
     }
+
+
+
 }

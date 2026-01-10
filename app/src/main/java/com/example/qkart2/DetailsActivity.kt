@@ -30,7 +30,7 @@ class DetailsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(
-            AppCompatDelegate.MODE_NIGHT_YES
+            AppCompatDelegate.MODE_NIGHT_NO
         )
         super.onCreate(savedInstanceState)
         binding = ActivityDetailsBinding.inflate(layoutInflater)
@@ -45,10 +45,14 @@ class DetailsActivity : AppCompatActivity() {
         val description = intent.getStringExtra("menudescription") ?: ""
         val ingredients = intent.getStringExtra("menuingredients") ?: ""
         val price = intent.getStringExtra("menuprice")?: ""
+        val canteenId = intent.getStringExtra("canteenId") ?: ""
+        val restaurant_name = intent.getStringExtra("restaurant_name") ?: ""
+
 
         binding.textView17.text = name
         binding.textView20.text = description
         binding.textView23.text = ingredients
+        binding.textView22.text = restaurant_name
 
         binding.backicon3.setOnClickListener {
             finish()
@@ -83,7 +87,9 @@ class DetailsActivity : AppCompatActivity() {
                             itemprice = price ,
                             datacount = 1,
                             description = description,
-                            ingredients = ingredients
+                            ingredients = ingredients,
+                            Restaurant_name = restaurant_name,
+                            canteenid = canteenId
                         )
 
                         dao.insert(cartItem)

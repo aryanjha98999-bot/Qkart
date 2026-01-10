@@ -1,7 +1,9 @@
 package com.example.qkart2
 
 import android.content.SharedPreferences
+import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -14,11 +16,15 @@ import com.example.qkart2.roomdb.historyfoodData
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.razorpay.Checkout
+import com.razorpay.PaymentResultListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
-class PayOutActivity : AppCompatActivity() {
+class PayOutActivity : AppCompatActivity(), PaymentResultListener {
 
     private lateinit var binding: ActivityPayOutBinding
     private lateinit var sharedPreferences: SharedPreferences
@@ -26,35 +32,56 @@ class PayOutActivity : AppCompatActivity() {
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
+    private var totalAmount = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
-            AppCompatDelegate.setDefaultNightMode(
-                AppCompatDelegate.MODE_NIGHT_YES
-            )
+
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val modeofpayment = arrayOf(
+            "Online Payment",
+        )
+
+
+
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            modeofpayment
+        )
+
 
         binding = ActivityPayOutBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         sharedPreferences = getSharedPreferences("notedata", MODE_PRIVATE)
 
-        val total = intent.getIntExtra("total", 0)
-        binding.total.text = "₹$total"
+        totalAmount = intent.getIntExtra("total", 0)
+        binding.total.text = "₹$totalAmount"
 
-        loadData()
+        binding.backicon2.setOnClickListener { finish() }
+
+        loadSavedData()
+        binding.listoflocations.setAdapter(adapter)
 
         binding.button.setOnClickListener {
             if (auth.currentUser == null) {
                 Toast.makeText(this, "Please login first", Toast.LENGTH_SHORT).show()
-            } else {
-                placeOrder(total)
             }
+
+            else if (binding.listoflocations.text.toString().isEmpty()) {
+                Toast.makeText(this, "Please select the mode of payment", Toast.LENGTH_SHORT).show()
+            }
+            else {
+                binding.button.isEnabled = false  //prevent double payment
+                startPayment()
+            }
+
         }
     }
-
-    private fun placeOrder(total: Int) {
-
-        val user = auth.currentUser ?: return
+  private fun startPayment() {
 
         val name = binding.namem.text.toString().trim()
         val address = binding.addressm.text.toString().trim()
@@ -62,110 +89,154 @@ class PayOutActivity : AppCompatActivity() {
 
         if (name.isEmpty() || address.isEmpty() || number.isEmpty()) {
             Toast.makeText(this, "Fill all details", Toast.LENGTH_SHORT).show()
+            binding.button.isEnabled = true
             return
         }
 
-        val orderData = hashMapOf(
-            "userId" to user.uid,
-            "name" to name,
-            "address" to address,
-            "number" to number,
-            "total" to total,
-            "timestamp" to FieldValue.serverTimestamp(),
-            "status" to "pending"
-        )
+        val checkout = Checkout()
+        checkout.setKeyID("rzp_test_S7aSn8POMRQyGi")
 
-        firestore.collection("orders")
-            .add(orderData)
-            .addOnSuccessListener { orderDoc ->
-                uploadCartItems(orderDoc.id)
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show()
-            }
+        val options = JSONObject().apply {
+            put("name", "QKart")
+            put("description", "Food Order Payment")
+            put("currency", "INR")
+            put("amount", totalAmount * 100)
+
+            put("prefill", JSONObject().apply {
+                put("contact", number)
+                put("email", auth.currentUser?.email ?: "")
+            })
+        }
+
+        try {
+            checkout.open(this, options)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Payment error", Toast.LENGTH_SHORT).show()
+            binding.button.isEnabled = true
+        }
     }
 
-    private fun uploadCartItems(orderId: String) {
+    override fun onPaymentSuccess(paymentId: String?) {
+        Checkout.clearUserData(this)
+
+        saveUserData()
+
+        Toast.makeText(this, "Payment Successful", Toast.LENGTH_SHORT).show()
+        placeOrder(paymentId)
+    }
+
+    override fun onPaymentError(code: Int, response: String?) {
+        Checkout.clearUserData(this)
+        binding.button.isEnabled = true
+        Toast.makeText(this, "Payment Failed", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onDestroy() {
+        Checkout.clearUserData(this)
+        super.onDestroy()
+    }
+
+    private fun placeOrder(paymentId: String?) {
 
         lifecycleScope.launch(Dispatchers.IO) {
 
-            val db = foodDatabase.getDatabase(this@PayOutActivity)
-            val cartDao = db.foodDao()
-            val historyDao = db.historyfoodDao()
+            val user = auth.currentUser
+            if (user == null) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@PayOutActivity, "User not logged in", Toast.LENGTH_SHORT).show()
+                }
+                return@launch
+            }
 
-            val cartItems = cartDao.getAll()
+            val name = binding.namem.text.toString().trim()
+            val address = binding.addressm.text.toString().trim()
+            val number = binding.number.text.toString().trim()
+
+            val db = foodDatabase.getDatabase(this@PayOutActivity)
+            val cartItems = db.foodDao().getAll()
+
             if (cartItems.isEmpty()) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@PayOutActivity, "Cart empty", Toast.LENGTH_SHORT).show()
                 }
                 return@launch
             }
+            val canteenId = cartItems.first().canteenid
 
-            val batch = firestore.batch()
+            val orderRef = firestore.collection("canteens")
+                .document(canteenId)
+                .collection("orders")
+                .document()
 
-            cartItems.forEach { item ->
-                val docRef = firestore.collection("orders")
-                    .document(orderId)
-                    .collection("cartItems")
-                    .document()
+            val total = cartItems.sumOf { parsePrice(it.itemprice) * it.datacount }
 
-                val map = hashMapOf(
+            val orderData = hashMapOf(
+                "userId" to user.uid,
+                "name" to name,
+                "address" to address,
+                "number" to number,
+                "paymentId" to paymentId,
+                "total" to total,
+                "timestamp" to FieldValue.serverTimestamp(),
+                "status" to "paid"
+            )
+            orderRef.set(orderData).await()
+
+            for (item in cartItems) {
+
+                val itemData = hashMapOf(
                     "itemName" to item.itemname,
-                    "price" to item.itemprice,
+                    "price" to parsePrice(item.itemprice),
                     "quantity" to item.datacount,
                     "imageUrl" to item.url
                 )
 
-                batch.set(docRef, map)
+                orderRef.collection("cartItems")
+                    .add(itemData)
+                    .await()
             }
 
+
+            val historyItems = cartItems.map {
+                historyfoodData(
+                    url = it.url,
+                    itemname = it.itemname,
+                    itemprice = it.itemprice,
+                    datacount = it.datacount,
+                    description = it.description,
+                    ingredients = it.ingredients,
+                    Restaurant_name = it.Restaurant_name,
+                    canteenid = it.canteenid
+                )
+            }
+
+            db.historyfoodDao().insert(historyItems)
+            db.foodDao().deleteAll()
+
             withContext(Dispatchers.Main) {
-                batch.commit()
-                    .addOnSuccessListener {
-
-                        lifecycleScope.launch(Dispatchers.IO) {
-
-                            val historyItems = cartItems.map {
-                                historyfoodData(
-                                    itemname = it.itemname,
-                                    itemprice = it.itemprice.toString(),
-                                    datacount = it.datacount,
-                                    url = it.url,
-                                    description = it.description,
-                                    ingredients = it.ingredients
-                                )
-                            }
-
-                            historyDao.deleteAll()
-                            historyDao.insert(historyItems)
-                            cartDao.deleteAll()
-
-                            withContext(Dispatchers.Main) {
-                                congratsBottomSheetFraagment()
-                                    .show(supportFragmentManager, "congrats")
-
-                                Toast.makeText(
-                                    this@PayOutActivity,
-                                    "Order placed successfully",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                    }
-                    .addOnFailureListener {
-                        Toast.makeText(
-                            this@PayOutActivity,
-                            "Cart upload failed",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                congratsBottomSheetFraagment().show(supportFragmentManager, "congrats")
+                Toast.makeText(this@PayOutActivity, "Order placed successfully", Toast.LENGTH_SHORT)
+                    .show()
+                binding.button.isEnabled = true
             }
         }
     }
 
-    private fun loadData() {
+    private fun loadSavedData() {
         binding.namem.setText(sharedPreferences.getString("name", ""))
         binding.addressm.setText(sharedPreferences.getString("address", ""))
         binding.number.setText(sharedPreferences.getString("number", ""))
+    }
+
+    private fun saveUserData() {
+        sharedPreferences.edit()
+            .putString("name", binding.namem.text.toString())
+            .putString("address", binding.addressm.text.toString())
+            .putString("number", binding.number.text.toString())
+            .apply()
+    }
+
+    private fun parsePrice(price: String): Int {
+        return price.replace("₹", "").trim().toIntOrNull() ?: 0
     }
 }

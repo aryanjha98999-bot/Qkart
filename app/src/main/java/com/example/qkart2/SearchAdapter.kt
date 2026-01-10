@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide
 import com.example.qkart2.roomdb.foodData
 import com.example.qkart2.roomdb.foodDatabase
 import com.example.qkart2.fragment.DataCLassMenu
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,10 +28,7 @@ class SearchAdapter(
 
     private val dao = foodDatabase.getDatabase(context).foodDao()
 
-    override fun onCreateViewHolder(
-        parent: ViewGroup,
-        viewType: Int
-    ): ViewHolderClass {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolderClass {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.menu_item, parent, false)
         return ViewHolderClass(view)
@@ -41,53 +39,66 @@ class SearchAdapter(
 
         holder.rvTitle.text = item.name
         holder.rvprice.text = item.price
+        holder.rvrestaurant.text=item.restaurant_name
 
         Glide.with(holder.itemView.context)
             .load(item.imageUrl)
             .placeholder(R.drawable.m)
             .error(R.drawable.m)
-            .fitCenter()
             .into(holder.rvimage)
 
-        Log.d("IMAGE_PATH", item.imageUrl)
+        // 🔹 Reset button state first (IMPORTANT)
+        holder.button1.isEnabled = true
+        holder.button1.text = "Add to cart"
+
+        // 🔹 Check if item already exists in cart
+        scope.launch(Dispatchers.IO) {
+            val count = dao.countItemByName(item.name)
+
+            withContext(Dispatchers.Main) {
+                if (count > 0) {
+                    holder.button1.text = "Added"
+                    holder.button1.isEnabled = false
+                }
+            }
+        }
 
         holder.button1.setOnClickListener {
 
-            if (holder.button1.text.toString() == "Add to cart") {
 
-                scope.launch(Dispatchers.IO) {
 
-                    val count = dao.countItemByName(item.name)
+            scope.launch(Dispatchers.IO) {
 
-                    withContext(Dispatchers.Main) {
+                val existingRestaurant = dao.getCartRestaurant()
 
-                        if (count > 0) {
-                            Toast.makeText(
-                                context,
-                                "Item already added to cart",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
+                withContext(Dispatchers.Main) {
 
-                            val cartItem = foodData(
-                                itemname = item.name,
-                                url = item.imageUrl,
-                                itemprice = item.price, datacount = 1,
-                                description = item.description,
-                                ingredients = item.ingredients
+                    if (existingRestaurant == null) {
+                        insertItem(item, holder)
+                        return@withContext
+                    }
+
+                    if (existingRestaurant == item.restaurant_name) {
+                        insertItem(item, holder)
+                    }
+
+                    else {
+                        MaterialAlertDialogBuilder(context)
+                            .setTitle("Replace Cart?")
+                            .setMessage(
+                                "Your cart contains items from $existingRestaurant.\n\n" +
+                                        "Do you want to remove them and add items from ${item.restaurant_name}?"
                             )
-
-                            dao.insert(cartItem) // ✅ INSERT INTO ROOM
-
-                            Toast.makeText(
-                                context,
-                                "Item added to cart",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            holder.button1.text = "Added"
-                            holder.button1.isEnabled = false
-                        }
+                            .setPositiveButton("Yes") { _, _ ->
+                                scope.launch(Dispatchers.IO) {
+                                    dao.deleteAll()
+                                    withContext(Dispatchers.Main) {
+                                        insertItem(item, holder)
+                                    }
+                                }
+                            }
+                            .setNegativeButton("No", null)
+                            .show()
                     }
                 }
             }
@@ -100,6 +111,7 @@ class SearchAdapter(
             intent.putExtra("menuimage", item.imageUrl)
             intent.putExtra("menudescription", item.description)
             intent.putExtra("menuingredients", item.ingredients)
+            intent.putExtra("restaurant_name", item.restaurant_name)
             it.context.startActivity(intent)
         }
     }
@@ -109,7 +121,45 @@ class SearchAdapter(
     class ViewHolderClass(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val rvimage: ImageView = itemView.findViewById(R.id.imagefood)
         val rvTitle: TextView = itemView.findViewById(R.id.foodname)
+        val rvrestaurant: TextView=itemView.findViewById(R.id.Restaurantname)
+
         val rvprice: TextView = itemView.findViewById(R.id.price)
         val button1: TextView = itemView.findViewById(R.id.addtocart)
+    }
+
+    private fun insertItem(item: DataCLassMenu, holder: SearchAdapter.ViewHolderClass) {
+        scope.launch(Dispatchers.IO) {
+
+            val exists = dao.countItemByName(item.name) > 0
+
+            if (!exists) {
+                val cartItem = foodData(
+                    itemname = item.name,
+                    url = item.imageUrl,
+                    itemprice = item.price,
+                    datacount = 1,
+                    description = item.description,
+                    ingredients = item.ingredients,
+                    Restaurant_name = item.restaurant_name,
+                    canteenid = item.canteenId
+                )
+
+                dao.insert(cartItem)
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Added to cart", Toast.LENGTH_SHORT).show()
+                    holder.button1.text = "Remove"
+                }
+
+            } else {
+                dao.deleteItemByName(item.name)
+
+                withContext(Dispatchers.Main) {
+                    holder.button1.text = "Add to cart"
+                    Toast.makeText(context, "Removed from cart", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
     }
 }

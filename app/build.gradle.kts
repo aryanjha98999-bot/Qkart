@@ -92,6 +92,11 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    ///razorpay
+    implementation("com.razorpay:checkout:1.6.33")
+
+
+    implementation("com.google.android.material:material:1.11.0")
 }
 
 

@@ -43,6 +43,8 @@ class AdapterClass(
 
         holder.rvTitle.text = item.dataTitle
         holder.rvprice.text = item.dataprice
+        holder.Restaurant_name.text=item.Restaurant_name
+
 
         scope.launch(Dispatchers.IO) {
             val exists = foodDao.countItemByName(item.dataTitle) > 0
@@ -66,7 +68,9 @@ class AdapterClass(
                         itemprice = item.dataprice,
                         datacount = 1,
                         description = item.description,
-                        ingredients = item.ingredients
+                        ingredients = item.ingredients,
+                        Restaurant_name = item.Restaurant_name,
+                        canteenid = item.canteenid
                     )
 
                     foodDao.insert(cartItem)
@@ -88,12 +92,11 @@ class AdapterClass(
             }
         }
 
+        // 🔥 OPEN FULL CANTEEN MENU
         holder.itemView.setOnClickListener {
-            val intent = Intent(context, detailsActivity2::class.java)
-            intent.putExtra("menuname", item.dataTitle)
-            intent.putExtra("menuimage", item.dataimaage)
-            intent.putExtra("ingredients", item.ingredients)
-            intent.putExtra("description", item.description)
+            val intent = Intent(context, CanteenMenuActivity::class.java)
+            intent.putExtra("canteenId", item.canteenid)
+            intent.putExtra("canteenName", item.Restaurant_name)
             context.startActivity(intent)
         }
     }
@@ -105,5 +108,6 @@ class AdapterClass(
         val rvTitle: TextView = itemView.findViewById(R.id.foodname)
         val rvprice: TextView = itemView.findViewById(R.id.price)
         val addtocart: TextView = itemView.findViewById(R.id.addtocart)
+        val Restaurant_name: TextView = itemView.findViewById(R.id.textView4)
     }
 }

@@ -15,8 +15,9 @@ class ChooseLocationActivity : AppCompatActivity() {
     private lateinit var binding: ActivityChooseLocationBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        AppCompatDelegate.setDefaultNightMode(
+            AppCompatDelegate.MODE_NIGHT_NO
+        )
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -25,16 +26,6 @@ class ChooseLocationActivity : AppCompatActivity() {
         binding = ActivityChooseLocationBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(
-                systemBars.left,
-                systemBars.top,
-                systemBars.right,
-                systemBars.bottom
-            )
-            insets
-        }
 
         val locationList = arrayOf(
             "Jodhpur",

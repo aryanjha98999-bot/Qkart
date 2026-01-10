@@ -3,9 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
-    <!-- REQUEST ONLY ONCE -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /> <!-- REQUEST ONLY ONCE -->
     <uses-permission android:name="com.example.adminapp.READ_FOOD" />
 
     <application
@@ -17,30 +15,43 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.QKart2">
-
-        <activity android:name=".detailsActivity2" android:exported="false" />
-        <activity android:name=".DetailsActivity" android:exported="false" />
-        <activity android:name=".PayOutActivity" android:exported="false" />
-        <activity android:name=".ChooseLocationActivity" android:exported="false" />
-        <activity android:name=".StartActivity2" android:exported="false" />
-        <activity android:name=".SignActivity" android:exported="false" />
-        <activity android:name=".LoginActivity" android:exported="false" />
-
+        <activity
+            android:name=".CanteenMenuActivity"
+            android:exported="false" />
+        <activity
+            android:name=".detailsActivity2"
+            android:exported="false" />
+        <activity
+            android:name=".DetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PayOutActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ChooseLocationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".StartActivity2"
+            android:exported="false" />
+        <activity
+            android:name=".SignActivity"
+            android:exported="false" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
         <activity
             android:name=".splashscreen"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="stateAlwaysHidden|adjustPan" />
-
-
-
     </application>
+
 </manifest>

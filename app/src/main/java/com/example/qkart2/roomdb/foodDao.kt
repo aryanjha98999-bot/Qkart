@@ -13,9 +13,14 @@ interface foodDao {
     @Query("SELECT * FROM item_table")
     fun getAll(): List<foodData>
 
-    // For ContentProvider (Other App)
     @Query("SELECT * FROM item_table")
     fun getAllCursor(): Cursor
+
+    @Query("UPDATE item_table SET datacount = :count WHERE itemname = :name")
+    fun updateItemCount(name: String, count: Int)
+    @Query("SELECT DISTINCT Restaurant_name FROM item_table LIMIT 1")
+    suspend fun getCartRestaurant(): String?
+
 
 
     @Query("SELECT * FROM item_table WHERE id = :itemId")

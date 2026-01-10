@@ -66,7 +66,9 @@ class HistoryAdapter(
                             itemprice = item.dataprice,
                             datacount = 1,
                             description = item.description,
-                            ingredients = item.ingredients
+                            ingredients = item.ingredients,
+                            Restaurant_name = item.Restaurant_name,
+                            canteenid = item.canteenid
                         )
 
                         dao.insert(cartItem)

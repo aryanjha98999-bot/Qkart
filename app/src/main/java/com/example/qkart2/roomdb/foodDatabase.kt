@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.qkart2.roomdb.foodData
 import com.example.qkart2.roomdb.historyfoodDao
 
-@Database(entities = [foodData::class, historyfoodData::class ], version = 6)
+@Database(entities = [foodData::class, historyfoodData::class ], version = 8)
 abstract class foodDatabase : RoomDatabase() {
 
     abstract fun foodDao(): foodDao
@@ -24,7 +24,7 @@ abstract class foodDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     foodDatabase::class.java,
-                    "food_database" // consistent name
+                    "food_database"
                 )
                     .fallbackToDestructiveMigration()
                     .build()

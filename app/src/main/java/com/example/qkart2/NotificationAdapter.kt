@@ -7,24 +7,23 @@ import com.example.qkart2.databinding.ItemNotificationBinding
 import com.example.qkart2.model.NotificationModel
 
 class NotificationAdapter(
-    private val list: MutableList<NotificationModel>
-) : RecyclerView.Adapter<NotificationAdapter.VH>() {
+    private val list: List<NotificationModel>
+) : RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
 
-    class VH(val binding: ItemNotificationBinding)
+    class ViewHolder(val binding: ItemNotificationBinding)
         : RecyclerView.ViewHolder(binding.root)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        return VH(
-            ItemNotificationBinding.inflate(
-                LayoutInflater.from(parent.context),
-                parent,
-                false
-            )
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val binding = ItemNotificationBinding.inflate(
+            LayoutInflater.from(parent.context), parent, false
         )
+        return ViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: VH, position: Int) {
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = list[position]
+
+        holder.binding.tvOrderName.text = "Order: ${item.orderName}"
         holder.binding.tvTitle.text = item.title
         holder.binding.tvMessage.text = item.message
     }

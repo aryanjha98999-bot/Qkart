@@ -16,7 +16,9 @@ data class historyfoodData(
     val itemprice: String,
     val datacount: Int,
     val description: String,
-    val ingredients: String
+    val ingredients: String,
+    val Restaurant_name: String,
+    val canteenid: String
 
 
 )

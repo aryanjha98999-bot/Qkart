@@ -34,7 +34,8 @@ CartFragment : Fragment() {
 
         binding = FragmentCartBinding.inflate(inflater, container, false)
 
-        cartAdapter = CartAdapter(cartList)
+        cartAdapter = CartAdapter(cartList, viewLifecycleOwner.lifecycleScope)
+
 
         binding.cartRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -81,13 +82,15 @@ CartFragment : Fragment() {
 
             val mappedItems = roomItems.map {
                 dataclasscart(
-                   it.url,it.itemname,it.itemprice,1,it.description,it.ingredients)
+                   it.url,it.itemname,it.itemprice,1,it.description,it.ingredients,it.Restaurant_name,it.canteenid
+                )
             }
 
             withContext(Dispatchers.Main) {
                 cartList.clear()
                 cartList.addAll(mappedItems)
-                cartAdapter.notifyDataSetChanged()
+                cartAdapter.updateList(mappedItems)
+
             }
         }
     }

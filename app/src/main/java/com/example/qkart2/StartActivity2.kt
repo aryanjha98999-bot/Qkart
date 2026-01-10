@@ -12,10 +12,9 @@ import com.example.qkart2.databinding.ActivityStart2Binding
 class StartActivity2 : AppCompatActivity() {
     private lateinit var binding: ActivityStart2Binding
     override fun onCreate(savedInstanceState: Bundle?) {
-
-            AppCompatDelegate.setDefaultNightMode(
-                AppCompatDelegate.MODE_NIGHT_YES
-            )
+        AppCompatDelegate.setDefaultNightMode(
+            AppCompatDelegate.MODE_NIGHT_NO
+        )
         super.onCreate(savedInstanceState)
         binding= ActivityStart2Binding.inflate(layoutInflater)
 
