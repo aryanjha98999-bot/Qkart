@@ -40,6 +40,9 @@ class detailsActivity2 : AppCompatActivity() {
         binding.textView17.text = name
         binding.textView20.text = description
         binding.textView23.text = ingredients
+        binding.backicon3.setOnClickListener {
+            finish()
+        }
 
         Glide.with(this)
             .load(image)

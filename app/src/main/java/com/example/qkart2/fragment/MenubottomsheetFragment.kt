@@ -1,16 +1,17 @@
 package com.example.qkart2.fragment
 
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.qkart2.MenuAdapter
 import com.example.qkart2.databinding.FragmentMenubottomsheetBinding
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MenubottomsheetFragment : BottomSheetDialogFragment() {
 
@@ -35,68 +36,42 @@ class MenubottomsheetFragment : BottomSheetDialogFragment() {
             requireContext(),
             viewLifecycleOwner.lifecycleScope
         )
-
-        binding.RecyclerviewMenu.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            setHasFixedSize(true)
-            adapter = menuAdapter
-        }
-
-        loadFoodFromProvider()
+        val recyclerView = binding.RecyclerviewMenu
+        recyclerView.adapter=menuAdapter
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.setHasFixedSize(true)
+        loadFoodFromFirestore()
 
         binding.backicon.setOnClickListener {
             dismiss()
         }
     }
 
-    private fun loadFoodFromProvider() {
-        val uri = Uri.parse("content://com.example.adminapp.provider/food")
+    private fun loadFoodFromFirestore() {
 
-        val cursor = try {
-            requireContext().contentResolver.query(uri, null, null, null, null)
-        } catch (e: Exception) {
-            Log.e("MENU_DEBUG", "Query failed", e)
-            null
-        }
+        FirebaseFirestore.getInstance()
+            .collection("menu")
+            .get()
+            .addOnSuccessListener { result->
 
-        if (cursor == null) {
-            Log.e("MENU_DEBUG", "Cursor is NULL")
-            return
-        }
+                dataList.clear()
 
-        dataList.clear()
-
-        cursor.use { c ->
-            Log.d("MENU_DEBUG", "Rows found = ${c.count}")
-
-            while (c.moveToNext()) {
-
-                val name = c.getString(c.getColumnIndexOrThrow("itemname"))
-                val price = c.getString(c.getColumnIndexOrThrow("itemprice"))
-                val imageUrl = c.getString(c.getColumnIndexOrThrow("url"))
-
-                val description = runCatching {
-                    c.getString(c.getColumnIndexOrThrow("description"))
-                }.getOrDefault("")
-
-                val ingredients = runCatching {
-                    c.getString(c.getColumnIndexOrThrow("ingredients"))
-                }.getOrDefault("")
-
-                dataList.add(
-                    DataCLassMenu(
-                        name = name,
-                        price = price,
-                        imageUrl = imageUrl,
-                        description = description,
-                        ingredients = ingredients
+                for (doc in result.documents) {
+                    val item = DataCLassMenu(
+                        name = doc.getString("itemname") ?: "",
+                        price = doc.getString("itemprice") ?: "",
+                        imageUrl = doc.getString("url") ?: "",
+                        description = doc.getString("description") ?: "",
+                        ingredients = doc.getString("ingredients") ?: ""
                     )
-                )
+                    dataList.add(item)
+                }
+
+                Toast.makeText(requireContext(), "Menu Loaded", Toast.LENGTH_SHORT).show()
+                menuAdapter.notifyDataSetChanged()
             }
-        }
-
-        Log.d("MENU_DEBUG", "Final list size = ${dataList.size}")
-
-        menuAdapter.notifyDataSetChanged()
+            .addOnFailureListener { e ->
+                Toast.makeText(requireContext(), "Failed to load menu", Toast.LENGTH_SHORT).show()
+            }
     }
 }

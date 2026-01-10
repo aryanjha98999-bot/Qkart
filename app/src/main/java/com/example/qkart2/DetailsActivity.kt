@@ -46,10 +46,14 @@ class DetailsActivity : AppCompatActivity() {
         val ingredients = intent.getStringExtra("menuingredients") ?: ""
         val price = intent.getStringExtra("menuprice")?: ""
 
-        // Bind UI
         binding.textView17.text = name
         binding.textView20.text = description
         binding.textView23.text = ingredients
+
+        binding.backicon3.setOnClickListener {
+            finish()
+        }
+
 
         Glide.with(this)
             .load(image)
@@ -97,7 +101,5 @@ class DetailsActivity : AppCompatActivity() {
             }
         }
     }
-
-    // ✨ Animation function
 
 }
