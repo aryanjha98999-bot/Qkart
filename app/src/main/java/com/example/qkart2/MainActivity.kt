@@ -25,12 +25,11 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 🔔 Notification bottom sheet
+
         binding.imageView5.setOnClickListener {
             NotificationBottomSheetFragment()
                 .show(supportFragmentManager, "Notification")
         }
-        // Default fragment
         if (savedInstanceState == null) {
             replaceFragment(HomeFragment())
         }
@@ -46,17 +45,10 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+
     }
 
     private fun replaceFragment(fragment: Fragment) {
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.frame_container, fragment)
-            .commit()
+        supportFragmentManager.beginTransaction().replace(R.id.frame_container, fragment).commit()
     }
 }

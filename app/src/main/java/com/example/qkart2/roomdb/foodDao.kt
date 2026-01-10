@@ -42,15 +42,14 @@ interface foodDao {
 
     @Query("SELECT * FROM item_table ORDER BY id DESC LIMIT 1")
     suspend fun getLastItem(): foodData?
-    @Query("UPDATE item_table SET datacount = :count WHERE itemname = :title")
-    fun updateItemCount(title: String, count: Int)
+
 
 
 
 
 
     @Query("SELECT COUNT(*) FROM item_table WHERE itemname = :name")
-    suspend infix fun countItemByName(name: String): Int
+    suspend fun countItemByName(name: String): Int
 
     @Query("SELECT * FROM item_table WHERE itemname = :name LIMIT 1")
     suspend fun getItemByName(name: String): foodData?

@@ -2,7 +2,6 @@ package com.example.qkart2.fragment
 
 import android.annotation.SuppressLint
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.qkart2.SearchAdapter
 import com.example.qkart2.databinding.FragmentSearchBinding
+import com.google.firebase.firestore.FirebaseFirestore
 
 class SearchFragment : Fragment() {
 
@@ -30,9 +30,11 @@ class SearchFragment : Fragment() {
 
         binding = FragmentSearchBinding.inflate(inflater, container, false)
 
-        adapter = SearchAdapter(filteredList,
+        adapter = SearchAdapter(
+            filteredList,
             context = requireContext(),
-            scope = viewLifecycleOwner.lifecycleScope )
+            scope = viewLifecycleOwner.lifecycleScope
+        )
 
         binding.recyclerview.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -40,53 +42,52 @@ class SearchFragment : Fragment() {
             adapter = this@SearchFragment.adapter
         }
 
-        loadFoodFromProvider()
+        // 🔥 REPLACED
+        loadFoodFromFirestore()
         setupSearchView()
 
         return binding.root
     }
 
-    // 🔥 LOAD DATA FROM ADMIN APP CONTENT PROVIDER
-    private fun loadFoodFromProvider() {
-        val uri = Uri.parse("content://com.example.adminapp.provider/food")
+    /**
+     * 🔥 Firestore replaces ContentProvider
+     */
+    private fun loadFoodFromFirestore() {
 
-        val cursor = try {
-            requireContext().contentResolver.query(uri, null, null, null, null)
-        } catch (e: SecurityException) {
-            Log.e("MENU_DEBUG", "Permission denied: ${e.message}")
-            null
-        }
+        FirebaseFirestore.getInstance()
+            .collection("menu")
+            .addSnapshotListener { snapshot, error ->
 
-        if (cursor == null) return
+                if (error != null) {
+                    Log.e("MENU_DEBUG", "Firestore error", error)
+                    return@addSnapshotListener
+                }
 
-        dataList.clear()
+                if (snapshot == null) return@addSnapshotListener
 
-        cursor.use {
-            while (it.moveToNext()) {
-                val name = it.getString(it.getColumnIndexOrThrow("itemname"))
-                val price = it.getString(it.getColumnIndexOrThrow("itemprice"))
-                val imageUrl = it.getString(it.getColumnIndexOrThrow("url"))
-                val description = it.getString(it.getColumnIndexOrThrow("description"))
-                val ingredients = it.getString(it.getColumnIndexOrThrow("ingredients"))
+                dataList.clear()
 
-                dataList.add(
-                    DataCLassMenu(
-                        name,
-                        price,
-                        imageUrl,
-                        description,
-                        ingredients
+                for (doc in snapshot.documents) {
+
+                    val item = DataCLassMenu(
+                        name = doc.getString("itemname") ?: "",
+                        price = doc.getString("itemprice") ?: "",
+                        imageUrl = doc.getString("url") ?: "",
+                        description = doc.getString("description") ?: "",
+                        ingredients = doc.getString("ingredients") ?: ""
                     )
-                )
+
+                    dataList.add(item)
+                }
+
+                filteredList.clear()
+                filteredList.addAll(dataList)
+                adapter.notifyDataSetChanged()
+
+                Log.d("MENU_DEBUG", "Items Loaded = ${dataList.size}")
             }
-        }
-
-        filteredList.clear()
-        filteredList.addAll(dataList)
-        adapter.notifyDataSetChanged()
-
-        Log.d("MENU_DEBUG", "Items Loaded = ${dataList.size}")
     }
+
     @SuppressLint("ResourceAsColor")
     private fun setupSearchView() {
 
@@ -98,6 +99,7 @@ class SearchFragment : Fragment() {
 
         binding.searchView.setOnQueryTextListener(object :
             SearchView.OnQueryTextListener {
+
             override fun onQueryTextSubmit(query: String?): Boolean = false
 
             override fun onQueryTextChange(newText: String?): Boolean {
@@ -108,6 +110,7 @@ class SearchFragment : Fragment() {
     }
 
     private fun filterList(text: String?) {
+
         filteredList.clear()
 
         if (text.isNullOrBlank()) {
